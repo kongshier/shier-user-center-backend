@@ -68,6 +68,27 @@ public class UserController {
         return userService.userLogin(userAccount, userPassword, request);
     }
 
+
+    /**
+     * 当前登录用户请求接口
+     *
+     * @param request
+     * @return
+     */
+    @GetMapping("/current")
+    public User getCurrentUser(HttpServletRequest request) {
+        // 获取登录态
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null) {
+            return null;
+        }
+        // 根据id获取到用户信息，去数据库查询
+        long userId = currentUser.getId();
+        User user = userService.getById(userId);
+        return userService.getSafetyUser(user);
+    }
+
     /**
      * 查询用户接口
      *

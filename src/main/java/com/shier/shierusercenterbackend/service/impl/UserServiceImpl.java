@@ -132,7 +132,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         // 用户信息脱敏
         User safetyUser = getSafetyUser(user);
-        // 用户登录成功
+        // 用户登录成功,将登录态设置到Session当中
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
         return safetyUser;
     }
