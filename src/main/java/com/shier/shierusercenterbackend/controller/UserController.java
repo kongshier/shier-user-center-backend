@@ -1,16 +1,19 @@
 package com.shier.shierusercenterbackend.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.shier.shierusercenterbackend.common.BaseResponse;
+import com.shier.shierusercenterbackend.common.ErrorCode;
+import com.shier.shierusercenterbackend.exception.BusinessException;
 import com.shier.shierusercenterbackend.model.domian.User;
 import com.shier.shierusercenterbackend.model.request.UserLoginRequest;
 import com.shier.shierusercenterbackend.model.request.UserRegisterRequest;
 import com.shier.shierusercenterbackend.service.UserService;
+import com.shier.shierusercenterbackend.utils.ResultUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,17 +38,19 @@ public class UserController {
      * @return
      */
     @PostMapping("/register")
-    public Long userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
+    public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            return null;
+        String userCode = userRegisterRequest.getUserCode();
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, userCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        return userService.userRegister(userAccount, userPassword, checkPassword);
+        long userId = userService.userRegister(userAccount, userPassword, checkPassword, userCode);
+        return ResultUtils.success(userId);
     }
 
     /**
@@ -56,7 +61,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
-    public User userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
             return null;
         }
@@ -65,9 +70,24 @@ public class UserController {
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             return null;
         }
-        return userService.userLogin(userAccount, userPassword, request);
+        User user = userService.userLogin(userAccount, userPassword, request);
+        return ResultUtils.success(user);
     }
 
+    /**
+     * 用户注销接口
+     *
+     * @param request
+     * @return
+     */
+    @PostMapping("/logout")
+    public BaseResponse<Integer> userLogout(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        int logoutResult = userService.userLogout(request);
+        return ResultUtils.success(logoutResult);
+    }
 
     /**
      * 当前登录用户请求接口
@@ -76,17 +96,18 @@ public class UserController {
      * @return
      */
     @GetMapping("/current")
-    public User getCurrentUser(HttpServletRequest request) {
+    public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         // 获取登录态
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if (currentUser == null) {
-            return null;
+            throw new BusinessException(ErrorCode.NOT_LOGIN, "未登录");
         }
         // 根据id获取到用户信息，去数据库查询
         long userId = currentUser.getId();
         User user = userService.getById(userId);
-        return userService.getSafetyUser(user);
+        User resultUser = userService.getSafetyUser(user);
+        return ResultUtils.success(resultUser);
     }
 
     /**
@@ -96,10 +117,10 @@ public class UserController {
      * @return
      */
     @GetMapping("/search")
-    public List<User> searchUsers(String username, HttpServletRequest request) {
+    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
         // 管理员校验
         if (!isAdmin(request)) {
-            return new ArrayList<>();
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "非管理员");
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
@@ -107,7 +128,8 @@ public class UserController {
         }
         List<User> userList = userService.list(queryWrapper);
         //userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
-        return userList.stream().map(userService::getSafetyUser).collect(Collectors.toList());
+        List<User> users = userList.stream().map(userService::getSafetyUser).collect(Collectors.toList());
+        return ResultUtils.success(users);
     }
 
     /**
@@ -117,14 +139,15 @@ public class UserController {
      * @return
      */
     @PostMapping("/delete")
-    public boolean deleteUser(@RequestBody long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
         if (!isAdmin(request)) {
-            return false;
+            return null;
         }
         if (id < 0) {
-            return false;
+            return null;
         }
-        return userService.removeById(id);
+        boolean removeUser = userService.removeById(id);
+        return ResultUtils.success(removeUser);
     }
 
     /**

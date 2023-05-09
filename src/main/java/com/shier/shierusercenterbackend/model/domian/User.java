@@ -1,9 +1,6 @@
 package com.shier.shierusercenterbackend.model.domian;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -38,7 +35,7 @@ public class User implements Serializable {
     private String avatarUrl;
 
     /**
-     * 性别
+     * 性别 0-男 1-女
      */
     private Integer gender;
 
@@ -58,7 +55,7 @@ public class User implements Serializable {
     private String email;
 
     /**
-     * 状态 0 - 正常
+     * 状态  0-正常 1-注销 2-封号
      */
     private Integer userStatus;
 
@@ -75,7 +72,7 @@ public class User implements Serializable {
     /**
      * 是否删除  逻辑删除
      */
-    @TableField
+    @TableLogic
     private Integer isDelete;
 
     /**
