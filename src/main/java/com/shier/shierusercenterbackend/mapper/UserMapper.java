@@ -1,6 +1,6 @@
 package com.shier.shierusercenterbackend.mapper;
 
-import com.shier.shierusercenterbackend.model.domian.User;
+import com.shier.shierusercenterbackend.model.domain.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

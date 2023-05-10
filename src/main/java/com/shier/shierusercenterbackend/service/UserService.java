@@ -1,7 +1,7 @@
 package com.shier.shierusercenterbackend.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.shier.shierusercenterbackend.model.domian.User;
+import com.shier.shierusercenterbackend.model.domain.User;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -47,4 +47,12 @@ public interface UserService extends IService<User> {
      * @return
      */
     int userLogout(HttpServletRequest request);
+
+    /**
+     * 获取当前登录用户
+     *
+     * @param request
+     * @return
+     */
+    User getLoginUser(HttpServletRequest request);
 }

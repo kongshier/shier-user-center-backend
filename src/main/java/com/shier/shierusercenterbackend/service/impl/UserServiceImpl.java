@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shier.shierusercenterbackend.common.ErrorCode;
 import com.shier.shierusercenterbackend.exception.BusinessException;
 import com.shier.shierusercenterbackend.mapper.UserMapper;
-import com.shier.shierusercenterbackend.model.domian.User;
+import com.shier.shierusercenterbackend.model.domain.User;
 import com.shier.shierusercenterbackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -49,19 +49,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         // 非空校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, userCode)) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"参数为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         // 账号长度不小于4位
         if (userAccount.length() < 4) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"账号长度小于4位");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号长度小于4位");
         }
         // 密码不小于8位
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"密码小于8位");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码小于8位");
         }
         // 用户编号长度1~15位
         if (userCode.length() > 15) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"用户编号大于15位");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户编号大于15位");
         }
 
         // 账户不包含特殊字符
@@ -69,18 +69,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 使用正则表达式进行校验
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if (matcher.find()) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"账号含有特殊字符");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号含有特殊字符");
         }
         // 密码和校验密码是否相同
         if (!userPassword.equals(checkPassword)) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"两次密码不一致");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次密码不一致");
         }
         // 账户名称不能重复，查询数据库当中是否存在相同名称用户
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
         long count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"账号名称已存在");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号名称已存在");
         }
         // 编号不能重复
         queryWrapper = new QueryWrapper<>();
@@ -88,7 +88,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // count大于0，说明有重复了
         count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"用户编号已存在");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户编号已存在");
         }
 
         // 对密码进行加密
@@ -100,7 +100,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUserCode(userCode);
         boolean saveResult = this.save(user);
         if (!saveResult) {
-            throw  new BusinessException(ErrorCode.PARAMS_ERROR,"保存数据库失败");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "保存数据库失败");
         }
         return user.getId();
     }
@@ -117,15 +117,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 非空校验
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号密码不能为空");
         }
         // 账号长度不小于4位
         if (userAccount.length() < 4) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号长度小于8位");
         }
         // 密码不小于8位
         if (userPassword.length() < 8) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码小于8位");
         }
 
         // 账户不包含特殊字符
@@ -133,7 +133,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 使用正则表达式进行校验
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if (matcher.find()) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号包含特殊字符");
         }
         // 对密码进行加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
@@ -144,13 +144,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = userMapper.selectOne(queryWrapper);
         if (user == null) {
             log.info("user login failed, userAccount cannot match userPassword");
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号密码不正确");
+
         }
         // 用户信息脱敏
         User safetyUser = getSafetyUser(user);
         // 用户登录成功,将登录态设置到Session当中
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
         return safetyUser;
+    }
+    /**
+     * 获取当前登录用户
+     *
+     * @param request
+     * @return
+     */
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        // 先判断是否已登录
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 从数据库查询（追求性能的话可以注释，直接走缓存）
+        long userId = currentUser.getId();
+        currentUser = this.getById(userId);
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        return currentUser;
     }
 
     /**

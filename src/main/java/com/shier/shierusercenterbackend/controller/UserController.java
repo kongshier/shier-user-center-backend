@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.shier.shierusercenterbackend.common.BaseResponse;
 import com.shier.shierusercenterbackend.common.ErrorCode;
 import com.shier.shierusercenterbackend.exception.BusinessException;
-import com.shier.shierusercenterbackend.model.domian.User;
-import com.shier.shierusercenterbackend.model.request.UserLoginRequest;
-import com.shier.shierusercenterbackend.model.request.UserRegisterRequest;
+import com.shier.shierusercenterbackend.exception.ThrowUtils;
+import com.shier.shierusercenterbackend.model.domain.User;
+import com.shier.shierusercenterbackend.model.request.*;
 import com.shier.shierusercenterbackend.service.UserService;
 import com.shier.shierusercenterbackend.utils.ResultUtils;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -27,6 +30,8 @@ import static com.shier.shierusercenterbackend.constant.UserConstant.USER_LOGIN_
  */
 @RestController
 @RequestMapping("/user")
+@Api(tags = "用户管理")
+@CrossOrigin(origins = "http://localhost:8000/", allowCredentials = "true")
 public class UserController {
     @Resource
     private UserService userService;
@@ -38,9 +43,10 @@ public class UserController {
      * @return
      */
     @PostMapping("/register")
+    @ApiOperation(value = "用户注册")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
@@ -61,14 +67,15 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
+    @ApiOperation(value = "用户登录")
     public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
         User user = userService.userLogin(userAccount, userPassword, request);
         return ResultUtils.success(user);
@@ -81,9 +88,10 @@ public class UserController {
      * @return
      */
     @PostMapping("/logout")
+    @ApiOperation(value = "退出登录")
     public BaseResponse<Integer> userLogout(HttpServletRequest request) {
         if (request == null) {
-            return null;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
         int logoutResult = userService.userLogout(request);
         return ResultUtils.success(logoutResult);
@@ -96,12 +104,13 @@ public class UserController {
      * @return
      */
     @GetMapping("/current")
+    @ApiOperation(value = "当前用户")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         // 获取登录态
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN, "未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "未登录");
         }
         // 根据id获取到用户信息，去数据库查询
         long userId = currentUser.getId();
@@ -111,16 +120,40 @@ public class UserController {
     }
 
     /**
+     * 创建用户
+     *
+     * @param userAddRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/add")
+    @ApiOperation(value = "新增用户")
+    public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest, HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
+        }
+        if (userAddRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+        }
+        User user = new User();
+        BeanUtils.copyProperties(userAddRequest, user);
+        boolean result = userService.save(user);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(user.getId());
+    }
+
+    /**
      * 查询用户接口
      *
      * @param username
      * @return
      */
     @GetMapping("/search")
+    @ApiOperation(value = "查询用户")
     public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
         // 管理员校验
         if (!isAdmin(request)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "非管理员");
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         if (StringUtils.isNotBlank(username)) {
@@ -133,15 +166,16 @@ public class UserController {
     }
 
     /**
-     * 删除用户接口
+     * 删除用户
      *
      * @param id
      * @return
      */
     @PostMapping("/delete")
+    @ApiOperation(value = "删除用户")
     public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
         if (!isAdmin(request)) {
-            return null;
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
         }
         if (id < 0) {
             return null;
@@ -149,6 +183,53 @@ public class UserController {
         boolean removeUser = userService.removeById(id);
         return ResultUtils.success(removeUser);
     }
+
+    /**
+     * 更新用户
+     *
+     * @param userUpdateRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/update")
+    @ApiOperation(value = "更新用户")
+    public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest, HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
+        }
+        if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User user = new User();
+        BeanUtils.copyProperties(userUpdateRequest, user);
+        boolean result = userService.updateById(user);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(true);
+    }
+
+    /**
+     * 用户自己更新个人信息
+     *
+     * @param userUpdateMyRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/update/my")
+    @ApiOperation(value = "用户更新信息")
+    public BaseResponse<Boolean> updateMyUser(@RequestBody UserUpdateMyRequest userUpdateMyRequest,
+                                              HttpServletRequest request) {
+        if (userUpdateMyRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        User user = new User();
+        BeanUtils.copyProperties(userUpdateMyRequest, user);
+        user.setId(loginUser.getId());
+        boolean result = userService.updateById(user);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(true);
+    }
+
 
     /**
      * 是否为管理员
@@ -161,7 +242,7 @@ public class UserController {
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User user = (User) userObj;
         //return user != null && user.getUserRole() == ADMIN_ROLE;
-        if (user == null || user.getUserRole() != ADMIN_ROLE) {
+        if (user == null || !user.getUserRole().equals(ADMIN_ROLE)) {
             return false;
         }
         return true;

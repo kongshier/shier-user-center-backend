@@ -1,4 +1,4 @@
-package com.shier.shierusercenterbackend.model.domian;
+package com.shier.shierusercenterbackend.model.domain;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -35,9 +35,9 @@ public class User implements Serializable {
     private String avatarUrl;
 
     /**
-     * 性别 0-男 1-女
+     * 性别 男 女
      */
-    private Integer gender;
+    private String gender;
 
     /**
      * 密码
@@ -76,9 +76,9 @@ public class User implements Serializable {
     private Integer isDelete;
 
     /**
-     * 用户角色 0 - 普通用户 1 - 管理员
+     * user-普通用户 admin-管理员 ban-封号
      */
-    private Integer userRole;
+    private String userRole;
 
     /**
      * 用户编号

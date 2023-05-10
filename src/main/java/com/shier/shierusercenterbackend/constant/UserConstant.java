@@ -12,12 +12,17 @@ public interface UserConstant {
     String USER_LOGIN_STATE = "userLoginState";
 
     /**
-     * 默认权限
+     * 默认权限 user-普通用户
      */
-    int DEFAULT_ROLE = 0;
+    String  DEFAULT_ROLE ="user";
 
     /**
-     * 管理员权限
+     * 管理员权限  admin-管理员
      */
-    int ADMIN_ROLE = 1;
+    String ADMIN_ROLE = "admin";
+
+    /**
+     * ban-封号
+     */
+    String USER_BAN = "ban";
 }

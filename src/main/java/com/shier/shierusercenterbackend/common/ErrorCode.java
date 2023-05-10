@@ -18,15 +18,17 @@ public enum ErrorCode {
     /**
      * 40100 未登录
      */
-    NOT_LOGIN(40100, "未登录", ""),
+    NOT_LOGIN_ERROR(40100, "未登录", ""),
     /**
      * 40101 无权限
      */
-    NO_AUTH(40101, "无权限", ""),
+    NO_AUTH_ERROR(40101, "无权限", ""),
     /**
      * 50000 内部系统错误
      */
     SYSTEM_ERROR(50000, "系统内部异常", ""),
+
+    OPERATION_ERROR(50001, "操作失败",""),
     /**
      * 成功
      */

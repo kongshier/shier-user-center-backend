@@ -1,6 +1,6 @@
 package com.shier.shierusercenterbackend.service;
 
-import com.shier.shierusercenterbackend.model.domian.User;
+import com.shier.shierusercenterbackend.model.domain.User;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,7 +24,7 @@ public class UserServiceTest {
         user.setUsername("Shier");
         user.setUserAccount("猫十二懿");
         user.setAvatarUrl("https://profile.csdnimg.cn/2/B/1/1_qq_56098191");
-        user.setGender(0);
+        user.setGender("男");
         user.setUserPassword("12345678");
         user.setPhone("888888888");
         user.setEmail("66666666@qq.com");
