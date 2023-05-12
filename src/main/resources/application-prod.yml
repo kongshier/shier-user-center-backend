@@ -4,7 +4,7 @@ server:
     context-path: /api
     session:
       cookie:
-        domain: user.kongshier.top
+        domain: xxxx
         same-site: lax
         secure: false
 spring:
