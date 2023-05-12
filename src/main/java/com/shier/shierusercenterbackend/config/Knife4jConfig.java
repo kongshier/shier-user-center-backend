@@ -40,7 +40,7 @@ public class Knife4jConfig {
                 // 接口文档的标题
                 .title("用户中心接口平台管理")
                 // 接口文档的描述信息
-                .description("用户管理，管理员可对用户进行增删改查操作，用户可以修改直接的信息")
+                .description("用户管理，管理员可对用户进行增删改查操作，用户可以修改自己的信息")
                 // 提供服务的是谁？可以填写你自己的地址因为是你自己提供的服务
                 .termsOfServiceUrl("https://github.com/kongshier")
                 .contact(new Contact("Shier", "https://blog.csdn.net/qq_56098191", "2927527234@qq.com"))
