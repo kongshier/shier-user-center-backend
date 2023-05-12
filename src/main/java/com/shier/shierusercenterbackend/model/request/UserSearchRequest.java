@@ -1,6 +1,6 @@
 package com.shier.shierusercenterbackend.model.request;
 
-import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.shier.shierusercenterbackend.common.PageRequest;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -9,11 +9,11 @@ import java.util.Date;
 /**
  * 用户更新请求
  *
+ * @author Shier
  */
 @Data
-public class UserUpdateRequest implements Serializable {
+public class UserSearchRequest extends PageRequest implements Serializable {
 
-    private Long id;
     /**
      * 用户昵称
      */
@@ -24,20 +24,12 @@ public class UserUpdateRequest implements Serializable {
      */
     private String userAccount;
 
-    /**
-     * 用户头像
-     */
-    private String avatarUrl;
 
     /**
      * 性别 男 女
      */
     private String gender;
 
-    /**
-     * 密码
-     */
-    private String userPassword;
 
     /**
      * 电话
@@ -61,10 +53,9 @@ public class UserUpdateRequest implements Serializable {
     private Date updateTime;
 
     /**
-     * 是否删除  逻辑删除
+     * 创建时间
      */
-    @TableLogic
-    private Integer isDelete;
+    private Date createTime;
 
     /**
      * user-普通用户 admin-管理员 ban-封号

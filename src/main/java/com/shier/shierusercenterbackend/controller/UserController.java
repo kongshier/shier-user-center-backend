@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,7 +38,7 @@ public class UserController {
     private UserService userService;
 
     /**
-     * 用户注册请求接口
+     * 用户注册请求
      *
      * @param userRegisterRequest
      * @return
@@ -60,7 +61,7 @@ public class UserController {
     }
 
     /**
-     * 用户登录请求接口
+     * 用户登录请求
      *
      * @param userLoginRequest
      * @param request          请求对象
@@ -82,7 +83,7 @@ public class UserController {
     }
 
     /**
-     * 用户注销接口
+     * 用户注销
      *
      * @param request
      * @return
@@ -98,7 +99,7 @@ public class UserController {
     }
 
     /**
-     * 当前登录用户请求接口
+     * 当前登录用户请求
      *
      * @param request
      * @return
@@ -107,15 +108,7 @@ public class UserController {
     @ApiOperation(value = "当前用户")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         // 获取登录态
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "未登录");
-        }
-        // 根据id获取到用户信息，去数据库查询
-        long userId = currentUser.getId();
-        User user = userService.getById(userId);
-        User resultUser = userService.getSafetyUser(user);
+        User resultUser = userService.getLoginUser(request);
         return ResultUtils.success(resultUser);
     }
 
@@ -143,24 +136,69 @@ public class UserController {
     }
 
     /**
-     * 查询用户接口
+     * 查询用户
      *
-     * @param username
+     * @param searchRequest
      * @return
      */
     @GetMapping("/search")
     @ApiOperation(value = "查询用户")
-    public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
+    public BaseResponse<List<User>> searchUsers(UserSearchRequest searchRequest, HttpServletRequest request) {
         // 管理员校验
         if (!isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
         }
+        String username = searchRequest.getUsername();
+        String userAccount = searchRequest.getUserAccount();
+        String gender = searchRequest.getGender();
+        String phone = searchRequest.getPhone();
+        String email = searchRequest.getEmail();
+        Integer userStatus = searchRequest.getUserStatus();
+        String userRole = searchRequest.getUserRole();
+        String userCode = searchRequest.getUserCode();
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        Date updateTime = searchRequest.getUpdateTime();
+        Date createTime = searchRequest.getCreateTime();
+        // username
         if (StringUtils.isNotBlank(username)) {
             queryWrapper.like("username", username);
         }
+        // userAccount
+        if (StringUtils.isNotBlank(userAccount)) {
+            queryWrapper.like("userAccount", userAccount);
+        }
+        // gender
+        if (StringUtils.isNotBlank(username)) {
+            queryWrapper.eq("gender", gender);
+        }
+        // phone
+        if (StringUtils.isNotBlank(phone)) {
+            queryWrapper.like("phone", phone);
+        }
+        // email
+        if (StringUtils.isNotBlank(email)) {
+            queryWrapper.like("email", email);
+        }
+        // userStatus
+        if (userStatus != null) {
+            queryWrapper.eq("userStatus", userStatus);
+        }
+
+        if (StringUtils.isNotBlank(userRole)) {
+            queryWrapper.eq("userRole", userRole);
+        }
+
+        if (StringUtils.isNotBlank(userCode)) {
+            queryWrapper.eq("userCode", userCode);
+        }
+
+        if (updateTime != null) {
+            queryWrapper.like("updateTime", updateTime);
+        }
+        if (createTime != null) {
+            queryWrapper.like("createTime", createTime);
+        }
         List<User> userList = userService.list(queryWrapper);
-        //userList.stream().map(user -> userService.getSafetyUser(user)).collect(Collectors.toList());
         List<User> users = userList.stream().map(userService::getSafetyUser).collect(Collectors.toList());
         return ResultUtils.success(users);
     }
@@ -168,19 +206,19 @@ public class UserController {
     /**
      * 删除用户
      *
-     * @param id
+     * @param deleteRequest
      * @return
      */
     @PostMapping("/delete")
     @ApiOperation(value = "删除用户")
-    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteUser(@RequestBody UserDeleteRequest deleteRequest, HttpServletRequest request) {
         if (!isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
         }
-        if (id < 0) {
-            return null;
+        if (deleteRequest == null || deleteRequest.getId() <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean removeUser = userService.removeById(id);
+        boolean removeUser = userService.removeById(deleteRequest.getId());
         return ResultUtils.success(removeUser);
     }
 
@@ -230,6 +268,27 @@ public class UserController {
         return ResultUtils.success(true);
     }
 
+    /**
+     * 修改密码
+     *
+     * @param updatePasswordRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/update/password")
+    @ApiOperation(value = "用户密码更改")
+    public BaseResponse<Boolean> updateUserPassword(@RequestBody UserUpdatePasswordRequest updatePasswordRequest,
+                                                    HttpServletRequest request) {
+        if (!isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
+        }
+        boolean updateUserPassword = userService.updateUserPassword(updatePasswordRequest, request);
+        if (updateUserPassword) {
+            return ResultUtils.success(true);
+        } else {
+            return ResultUtils.error(ErrorCode.INVALID_PASSWORD_ERROR);
+        }
+    }
 
     /**
      * 是否为管理员

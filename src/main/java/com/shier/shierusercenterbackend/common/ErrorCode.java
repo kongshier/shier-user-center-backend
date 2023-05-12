@@ -28,7 +28,12 @@ public enum ErrorCode {
      */
     SYSTEM_ERROR(50000, "系统内部异常", ""),
 
-    OPERATION_ERROR(50001, "操作失败",""),
+    OPERATION_ERROR(50001, "操作失败", "操作失败"),
+
+    /**
+     * 密码无效
+     */
+    INVALID_PASSWORD_ERROR(40102, "无效密码", ""),
     /**
      * 成功
      */

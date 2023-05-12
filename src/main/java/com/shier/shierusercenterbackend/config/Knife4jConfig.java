@@ -2,6 +2,7 @@ package com.shier.shierusercenterbackend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
@@ -14,9 +15,11 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 /**
  * @author Shier
  * Knife4j 接口文档配置
+ *
  */
 @Configuration
 @EnableSwagger2
+@Profile({"dev", "test"})   //版本控制访问
 public class Knife4jConfig {
     @Bean
     public Docket defaultApi2() {
@@ -37,7 +40,7 @@ public class Knife4jConfig {
                 // 接口文档的标题
                 .title("用户中心接口平台管理")
                 // 接口文档的描述信息
-                .description("用户管理")
+                .description("用户管理，管理员可对用户进行增删改查操作，用户可以修改直接的信息")
                 // 提供服务的是谁？可以填写你自己的地址因为是你自己提供的服务
                 .termsOfServiceUrl("https://github.com/kongshier")
                 .contact(new Contact("Shier", "https://blog.csdn.net/qq_56098191", "2927527234@qq.com"))

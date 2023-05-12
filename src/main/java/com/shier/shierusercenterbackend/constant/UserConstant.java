@@ -25,4 +25,11 @@ public interface UserConstant {
      * ban-封号
      */
     String USER_BAN = "ban";
+
+
+    /**
+     * 盐值,将密码进行混淆
+     */
+    String SALT = "shier";
+
 }

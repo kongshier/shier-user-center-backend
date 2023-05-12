@@ -4,19 +4,25 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shier.shierusercenterbackend.common.ErrorCode;
 import com.shier.shierusercenterbackend.exception.BusinessException;
+import com.shier.shierusercenterbackend.exception.ThrowUtils;
 import com.shier.shierusercenterbackend.mapper.UserMapper;
 import com.shier.shierusercenterbackend.model.domain.User;
+import com.shier.shierusercenterbackend.model.request.UserSearchRequest;
+import com.shier.shierusercenterbackend.model.request.UserUpdatePasswordRequest;
 import com.shier.shierusercenterbackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.shier.shierusercenterbackend.constant.UserConstant.SALT;
 import static com.shier.shierusercenterbackend.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
@@ -30,10 +36,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Resource
     private UserMapper userMapper;
 
-    /**
-     * 盐值,将密码进行混淆
-     */
-    private static final String SALT = "shier";
+
+    public static final int MIN_PASSWORD_LENGTH = 8;
 
     /**
      * 用户注册
@@ -56,7 +60,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号长度小于4位");
         }
         // 密码不小于8位
-        if (userPassword.length() < 8 || checkPassword.length() < 8) {
+        if (userPassword.length() < MIN_PASSWORD_LENGTH || checkPassword.length() < MIN_PASSWORD_LENGTH) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码小于8位");
         }
         // 用户编号长度1~15位
@@ -124,7 +128,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号长度小于8位");
         }
         // 密码不小于8位
-        if (userPassword.length() < 8) {
+        if (userPassword.length() < MIN_PASSWORD_LENGTH) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码小于8位");
         }
 
@@ -144,8 +148,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = userMapper.selectOne(queryWrapper);
         if (user == null) {
             log.info("user login failed, userAccount cannot match userPassword");
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号密码不正确");
-
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号不存在或密码不正确");
         }
         // 用户信息脱敏
         User safetyUser = getSafetyUser(user);
@@ -153,6 +156,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
         return safetyUser;
     }
+
     /**
      * 获取当前登录用户
      *
@@ -165,16 +169,113 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userObj;
         if (currentUser == null || currentUser.getId() == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "未登录");
         }
         // 从数据库查询（追求性能的话可以注释，直接走缓存）
         long userId = currentUser.getId();
         currentUser = this.getById(userId);
         if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "未登录");
         }
         return currentUser;
     }
+
+    /**
+     * 分页查询
+     * @param searchRequest
+     * @return
+     */
+    @Override
+    public QueryWrapper<User> getQueryWrapper(UserSearchRequest searchRequest)  {
+
+        if (searchRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+        }
+        String username = searchRequest.getUsername();
+        String userAccount = searchRequest.getUserAccount();
+        String gender = searchRequest.getGender();
+        String phone = searchRequest.getPhone();
+        String email = searchRequest.getEmail();
+        Integer userStatus = searchRequest.getUserStatus();
+        String userRole = searchRequest.getUserRole();
+        String userCode = searchRequest.getUserCode();
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        Date updateTime = searchRequest.getUpdateTime();
+        Date createTime = searchRequest.getCreateTime();
+        // username
+        if (StringUtils.isNotBlank(username)) {
+            queryWrapper.like("username", username);
+        }
+        // userAccount
+        if (StringUtils.isNotBlank(userAccount)) {
+            queryWrapper.like("userAccount", userAccount);
+        }
+        // gender
+        if (StringUtils.isNotBlank(username)) {
+            queryWrapper.eq("gender", gender);
+        }
+        // phone
+        if (StringUtils.isNotBlank(phone)) {
+            queryWrapper.like("phone", phone);
+        }
+        // email
+        if (StringUtils.isNotBlank(email)) {
+            queryWrapper.like("email", email);
+        }
+        // userStatus
+        if (userStatus != null) {
+            queryWrapper.eq("userStatus", userStatus);
+        }
+
+        if (StringUtils.isNotBlank(userRole)) {
+            queryWrapper.eq("userRole", userRole);
+        }
+
+        if (StringUtils.isNotBlank(userCode)) {
+            queryWrapper.eq("userCode", userCode);
+        }
+
+        if (updateTime != null) {
+            queryWrapper.like("updateTime", updateTime);
+        }
+        if (createTime != null) {
+            queryWrapper.like("createTime", createTime);
+        }
+        return queryWrapper;
+    }
+
+    /**
+     * 修改密码
+     *
+     * @param updatePasswordRequest
+     * @param request
+     * @return
+     */
+    @Override
+    public boolean updateUserPassword(UserUpdatePasswordRequest updatePasswordRequest, HttpServletRequest request) {
+        if (updatePasswordRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = getLoginUser(request);
+        Long userId = loginUser.getId();
+        if (userId < 0 || userId == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "不存在该用户");
+        }
+        User user = new User();
+        BeanUtils.copyProperties(updatePasswordRequest, user);
+        user.setId(loginUser.getId());
+
+        // 使用 MD5 加密新密码
+        String encryptedPassword = DigestUtils.md5DigestAsHex((SALT + updatePasswordRequest.getNewPassword()).getBytes());
+        user.setUserPassword(encryptedPassword);
+        if (encryptedPassword.equals(updatePasswordRequest.getUserPassword())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "修改密码不能相同");
+        }
+        boolean result = updateById(user);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return true;
+    }
+
 
     /**
      * 用户脱敏
