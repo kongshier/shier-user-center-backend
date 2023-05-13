@@ -32,7 +32,7 @@ import static com.shier.shierusercenterbackend.constant.UserConstant.USER_LOGIN_
 @RestController
 @RequestMapping("/user")
 @Api(tags = "用户管理")
-@CrossOrigin(origins = "http://localhost:8000/", allowCredentials = "true")
+@CrossOrigin(origins = "http://user.kongshier.top/", allowCredentials = "true")
 public class UserController {
     @Resource
     private UserService userService;
