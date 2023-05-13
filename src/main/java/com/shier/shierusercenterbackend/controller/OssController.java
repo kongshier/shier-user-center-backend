@@ -13,7 +13,7 @@ import javax.annotation.Resource;
 @Api(tags = "阿里云文件管理")
 @RestController
 @RequestMapping("/fileOss")
-@CrossOrigin(origins = "http://localhost:8000/", allowCredentials = "true")
+@CrossOrigin(origins = "http://user.kongshier.top/", allowCredentials = "true")
 public class OssController {
 
     @Resource
