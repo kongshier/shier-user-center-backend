@@ -12,8 +12,8 @@ spring:
     name: shier-user-center
   datasource:
     url: jdbc:mysql://xxxxx/user-center?useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT%2B8&useSSL=false
-    username: root
-    password: shier
+    username: 123456
+    password: 123456
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
